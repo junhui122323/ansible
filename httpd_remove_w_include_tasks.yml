@@ -1,0 +1,12 @@
+- name: Remove httpd on the nodes
+  hosts: all
+  become: yes
+
+  tasks:
+    - name: httpd for Rocky
+      include_tasks: Rocky_remove.yml
+      when: ansible_distribution == 'Rocky'
+    
+    - name: httpd for Ubuntu
+      include_tasks: Ubuntu_remove.yml
+      when: ansible_distribution == 'Ubuntu'

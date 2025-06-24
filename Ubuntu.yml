@@ -1,0 +1,20 @@
+- name: install apache2 web server
+  action: "{{ ansible_pkg_mgr }} name=apache2 state=present update_cache=yes"
+  
+- name: Upload custom index.html to the web server
+  copy:
+    src: /home/junhan/index.html
+    dest: /var/www/html/index.html
+    mode: "0644"
+
+- name: Create images directory if it does not exist
+  file:
+    path: /var/www/html/images
+    state: directory
+    mode: "0755"
+
+- name: Upload image to the web server
+  copy:
+    src: /home/junhan/images/two-rabbit.jpg
+    dest: /var/www/html/images/two-rabbit.jpg
+    mode: "0644"

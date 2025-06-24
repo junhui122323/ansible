@@ -1,0 +1,17 @@
+- name: Remove custom index.html from the web server
+  file:
+    path: /var/www/html/index.html
+    state: absent
+
+- name: Remove image from the web server
+  file:
+    path: /var/www/html/images/two-rabbit.jpg
+    state: absent
+
+- name: Remove images directory if empty
+  file:
+    path: /var/www/html/images
+    state: absent
+ 
+- name: remove httpd web server
+  action: "{{ ansible_pkg_mgr }} name=apache2 state=absent autoremove=yes"

@@ -1,0 +1,13 @@
+- name: Install httpd on the nodes
+  hosts: all
+  become: yes
+
+  tasks:
+    - name: httpd for Rocky
+      include_tasks: Rocky.yml
+      when: ansible_distribution == 'Rocky'
+    
+    - name: httpd for Ubuntu
+      include_tasks: Ubuntu.yml
+      when: ansible_distribution == 'Ubuntu'
+
