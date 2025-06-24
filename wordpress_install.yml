@@ -1,0 +1,183 @@
+- name: Setup MariaDB on Ubuntu
+  hosts: ubuntu
+  become: yes
+  tasks:
+    # 파이썬 MySQL 모듈 설치 (ansible에서 mysql_* 모듈 사용하려면 필요)
+    - name: Ensure Python MySQL module is installed (Python 3)
+      apt:
+        name: python3-pymysql
+        state: present
+        update_cache: yes
+
+    # MariaDB 설치
+    - name: Install MariaDB server
+      apt:
+        name: mariadb-server
+        state: present
+        update_cache: yes
+
+    # MariaDB 시작 및 부팅 시 자동 시작
+    - name: Start and enable MariaDB
+      service:
+        name: mariadb
+        state: started
+        enabled: yes
+
+    # root 비밀번호 설정
+    - name: Set root password for MariaDB
+      shell: >
+        mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED BY 'Test1752!';"
+
+    # .my.cnf 생성 (비밀번호 없이 mysql 명령어 실행 가능)
+    - name: Create root .my.cnf for passwordless login
+      copy:
+        dest: /root/.my.cnf
+        content: |
+          [client]
+          user=root
+          password=Test1752!
+        owner: root
+        group: root
+        mode: "0600"
+
+    # 익명 사용자 제거
+    - name: Remove anonymous users
+      mysql_user:
+        user: ""
+        host_all: yes
+        state: absent
+
+    # 루트의 외부접속 차단
+    - name: Disallow root login remotely
+      mysql_user:
+        user: root
+        host: "%"
+        state: absent
+
+    # 테스트 DB 삭제
+    - name: Remove test database
+      mysql_db:
+        name: test
+        state: absent
+
+    # 워드프레스 DB 생성
+    - name: Create WordPress database
+      mysql_db:
+        name: wordpress
+        state: present
+
+    # 워드프레스 DB 사용자 생성
+    - name: Create WordPress database user
+      mysql_user:
+        name: wordpressuser
+        password: wordpresspassword
+        priv: "wordpress.*:ALL"
+        host: "%"
+        state: present
+
+    # MariaDB 외부 접속 허용 (bind-address 주석 처리)
+    - name: Edit file
+      replace:
+        path: /etc/mysql/mariadb.conf.d/50-server.cnf
+        regexp: "bind-address"
+        replace: "#bind-address"
+
+    # MariaDB 재시작
+    - name: Restart and enable MariaDB
+      service:
+        name: mariadb
+        state: restarted
+
+# Rocky 서버에 워드프레스 설치
+- name: Setup WordPress on Rocky
+  hosts: rocky
+  become: yes
+  tasks:
+    # Remi GPG 키 설치
+    - name: Install GPG key for Remi repository
+      shell: |
+        rpm --import https://rpms.remirepo.net/RPM-GPG-KEY-remi
+
+    # Remi 저장소 설치
+    - name: Install Remi repository for PHP 8
+      shell: |
+        dnf install -y https://rpms.remirepo.net/enterprise/remi-release-8.rpm
+
+    # PHP 모듈 리셋
+    - name: Reset PHP module to allow switching streams
+      shell: |
+        dnf module reset php -y
+
+    # PHP 8 모듈 활성화
+    - name: Enable PHP 8 module
+      shell: |
+        dnf module enable php:remi-8.0 -y
+
+    # 워드프레스 실행을 위한 패키지 설치
+    - name: Install required packages for WordPress
+      dnf:
+        name:
+          - httpd
+          - php
+          - php-mysqlnd
+          - wget
+          - unzip
+        state: present
+
+    # Apache 시작 및 자동 시작
+    - name: Start and enable Apache
+      service:
+        name: httpd
+        state: started
+        enabled: yes
+
+    # 워드프레스 다운로드
+    - name: Download WordPress
+      get_url:
+        url: https://wordpress.org/latest.zip
+        dest: /tmp/wordpress.zip
+
+    # 압축 해제
+    - name: Extract WordPress
+      unarchive:
+        src: /tmp/wordpress.zip
+        dest: /var/www/html/
+        remote_src: yes
+
+    # 권한 설정
+    - name: Set permissions for WordPress
+      file:
+        path: /var/www/html/wordpress
+        state: directory
+        owner: apache
+        group: apache
+        mode: "0755"
+        recurse: yes
+
+    # SELinux 설정 (네트워크 접속 허용)
+    - name: Configure SELinux for WordPress
+      command: "setsebool -P httpd_can_network_connect on"
+
+    # 워드프레스 설정 파일 작성
+    - name: Create wp-config.php for WordPress
+      copy:
+        dest: /var/www/html/wordpress/wp-config.php
+        content: |
+          <?php
+          define('DB_NAME', 'wordpress');
+          define('DB_USER', 'wordpressuser');
+          define('DB_PASSWORD', 'wordpresspassword');
+          define('DB_HOST', '10.178.0.11');
+          define('DB_CHARSET', 'utf8');
+          define('DB_COLLATE', '');
+          $table_prefix = 'wp_';
+          define('WP_DEBUG', false);
+          if ( !defined('ABSPATH') )
+              define('ABSPATH', dirname(__FILE__) . '/');
+          require_once ABSPATH . 'wp-settings.php';
+
+    # Apache 재시작
+    - name: Restart and enable Apache
+      service:
+        name: httpd
+        state: restarted

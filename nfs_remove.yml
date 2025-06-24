@@ -1,0 +1,70 @@
+- name: Remove NFS client setup for Rocky Linux
+  hosts: rocky
+  become: yes
+  tasks:
+    # 마운트 해제
+    - name: Unmount NFS client directory
+      shell: umount /home/junhan/nfs_client
+      ignore_errors: yes
+
+    # 마운트 지점 디렉토리 제거
+    - name: Remove NFS client directory
+      file:
+        path: /home/junhan/nfs_client
+        state: absent
+
+    # nfs-utils 패키지 제거
+    - name: Uninstall NFS client packages
+      dnf:
+        name: nfs-utils
+        state: absent
+
+# Ubuntu 클라이언트 NFS 제거
+- name: Remove NFS client setup for Ubuntu
+  hosts: ubuntu
+  become: yes
+  tasks:
+    - name: Unmount NFS client directory
+      shell: umount /home/junhan/nfs_client
+      ignore_errors: yes
+
+    - name: Remove NFS client directory
+      file:
+        path: /home/junhan/nfs_client
+        state: absent
+
+    - name: Uninstall NFS client packages
+      apt:
+        name: nfs-common
+        state: absent
+
+# NFS 서버 제거
+- name: Remove NFS server setup
+  hosts: 10.178.0.9
+  become: yes
+  tasks:
+    # 공유 디렉토리 제거
+    - name: Remove NFS shared directory
+      file:
+        path: /home/junhan/nfs_shared
+        state: absent
+
+    # /etc/exports에서 공유 설정 제거
+    - name: Remove NFS server configuration from /etc/exports
+      lineinfile:
+        path: /etc/exports
+        regexp: '^/home/junhan/nfs_shared'
+        state: absent
+
+    # NFS 서비스 중지 및 비활성화
+    - name: Stop and disable NFS server service
+      service:
+        name: nfs-server
+        state: stopped
+        enabled: no
+
+    # NFS 서버 패키지 제거
+    - name: Uninstall NFS server packages
+      dnf:
+        name: nfs-utils
+        state: absent

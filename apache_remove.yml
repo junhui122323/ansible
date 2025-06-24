@@ -1,0 +1,63 @@
+- name: Remove Apache and content from Rocky
+  hosts: rocky
+  become: yes
+  tasks:
+    - name: Stop Apache web server
+      service:
+        name: httpd
+        state: stopped
+
+    - name: Disable Apache web server
+      service:
+        name: httpd
+        enabled: no
+
+    - name: Remove index.html from web server
+      file:
+        path: /var/www/html/index.html
+        state: absent
+
+    - name: Remove image from web server
+      file:
+        path: /var/www/html/images/two-rabbit.jpg
+        state: absent
+
+    - name: Remove images directory if empty
+      file:
+        path: /var/www/html/images
+        state: absent
+
+    - name: Remove Apache web server
+      dnf:
+        name: httpd
+        state: absent
+
+- name: Remove apache and files on ubuntu
+  hosts: ubuntu
+  become: yes
+  tasks:
+    - name: Stop apache web server
+      service:
+        name: apache2
+        state: stopped
+
+    - name: Remove custom index.html from the web server
+      file:
+        path: /var/www/html/index.html
+        state: absent
+
+    - name: Remove image from the web server
+      file:
+        path: /var/www/html/images/two-rabbit.jpg
+        state: absent
+
+    - name: Remove images directory if empty
+      file:
+        path: /var/www/html/images
+        state: absent
+
+    - name: Uninstall apache web server
+      apt:
+        name: apache2
+        state: absent
+        purge: yes

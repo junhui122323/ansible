@@ -1,0 +1,74 @@
+- name: Remove MariaDB setup on Ubuntu
+  hosts: ubuntu
+  become: yes
+  tasks:
+    - name: Remove WordPress database user
+      mysql_user:
+        name: wordpressuser
+        host: "%"
+        state: absent
+
+    - name: Remove WordPress database
+      mysql_db:
+        name: wordpress
+        state: absent
+
+    - name: Remove test database
+      mysql_db:
+        name: test
+        state: absent
+
+    - name: Remove MariaDB server
+      apt:
+        name: mariadb-server
+        state: absent
+
+    - name: Remove root .my.cnf file
+      file:
+        path: /root/.my.cnf
+        state: absent
+
+# Rocky에서 워드프레스 관련 제거
+- name: Remove WordPress setup on Rocky
+  hosts: rocky
+  become: yes
+  tasks:
+    - name: Stop Apache service
+      service:
+        name: httpd
+        state: stopped
+
+    - name: Remove WordPress files
+      file:
+        path: /var/www/html/wordpress
+        state: absent
+
+    - name: Remove downloaded WordPress archive
+      file:
+        path: /tmp/wordpress.zip
+        state: absent
+
+    - name: Remove required packages for WordPress
+      dnf:
+        name:
+          - httpd
+          - php
+          - php-mysqlnd
+          - wget
+          - unzip
+        state: absent
+
+    - name: Disable Remi repository
+      shell: |
+        dnf config-manager --disable remi-safe
+
+    - name: Remove Remi repository
+      file:
+        path: /etc/yum.repos.d/remi*.repo
+        state: absent
+
+    - name: Reset PHP module
+      shell: |
+        dnf module reset php -y
+
+

@@ -1,0 +1,69 @@
+- name: Setup for NFS server
+  hosts: localhost
+  become: yes
+  tasks:
+    - name: Make nfs_shared directory
+      file:
+        path: /home/junhan/nfs_shared
+        state: directory
+        mode: 0777
+
+    - name: Install NFS
+      dnf:
+        name: nfs-utils
+        state: present
+
+    - name: Configure /etc/exports
+      lineinfile:
+        path: /etc/exports
+        line: /home/junhan/nfs_shared 10.178.0.0/20(rw,sync)
+
+    - name: NFS service start
+      service:
+        name: nfs-server
+        state: restarted
+        enabled: yes
+
+- name: Setup for NFS client (rocky)
+  hosts: rocky
+  become: yes
+  tasks:
+    - name: Make nfs_client directory
+      file:
+        path: /home/junhan/nfs_client
+        state: directory
+
+    - name: Install NFS
+      dnf:
+        name: nfs-utils
+        state: present
+
+    - name: Mount point directory as client
+      mount:
+        path: /home/junhan/nfs_client
+        src: 10.178.0.9:/home/junhan/nfs_shared
+        fstype: nfs
+        state: mounted
+
+- name: Setup for NFS client (ubuntu)
+  hosts: ubuntu
+  become: yes
+  tasks:
+    - name: Make nfs_client directory
+      file:
+        path: /home/junhan/nfs_client
+        state: directory
+
+    - name: Install NFS (ubuntu)
+      apt:
+        pkg: nfs-common
+        state: present
+        update_cache: yes
+
+    - name: Mount point directory as client
+      mount:
+        path: /home/junhan/nfs_client
+        src: 10.178.0.9:/home/junhan/nfs_shared
+        fstype: nfs
+        opts: nfsvers=3
+        state: mounted
