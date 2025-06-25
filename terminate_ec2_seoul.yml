@@ -1,0 +1,31 @@
+- name: Ansible로 생성한 EC2 인스턴스 삭제
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars_files:
+    - /home/junhan/vars/aws_credentials.yml
+
+  tasks:
+    - name: 태그 이름이 "AnsibleCreatedEC2"인 EC2 인스턴스 조회
+      community.aws.ec2_instance_info:
+        aws_access_key: "{{ aws_access_key }}"
+        aws_secret_key: "{{ aws_secret_key }}"
+        region: "{{ aws_region }}"
+        filters:
+          "tag:Name": "AnsibleCreatedEC2"
+      register: ec2_info
+
+    - name: 찾은 인스턴스 ID 출력
+      debug:
+        msg: "삭제할 인스턴스 ID 목록: {{ ec2_info.instances | map(attribute='instance_id') | list }}"
+
+    - name: EC2 인스턴스 삭제 (terminate)
+      community.aws.ec2_instance:
+        aws_access_key: "{{ aws_access_key }}"
+        aws_secret_key: "{{ aws_secret_key }}"
+        region: "{{ aws_region }}"
+        instance_ids: "{{ ec2_info.instances | map(attribute='instance_id') | list }}"
+        state: absent
+        wait: true
+      when: ec2_info.instances | length > 0

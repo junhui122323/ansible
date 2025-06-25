@@ -1,0 +1,30 @@
+- name: 서울 리전 기존 VPC에 EC2 인스턴스 생성
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars_files:
+    - /home/junhan/vars/aws_credentials.yml
+
+  tasks:
+    - name: EC2 인스턴스 생성
+      community.aws.ec2_instance:
+        aws_access_key: "{{ aws_access_key }}"
+        aws_secret_key: "{{ aws_secret_key }}"
+        region: "{{ aws_region }}"
+        instance_type: "{{ instance_type }}"
+        image_id: "{{ ami_id }}"
+        key_name: "{{ key_name }}"
+        wait: yes
+        count: 1
+        network:
+          subnet_id: "{{ subnet_id }}"
+          assign_public_ip: yes
+        security_group: "{{ security_group_id }}"
+        tags:
+          Name: "AnsibleCreatedEC2"
+      register: ec2_result
+
+    - name: 생성된 인스턴스 정보 출력
+      debug:
+        var: ec2_result.instances[0].public_ip_address
